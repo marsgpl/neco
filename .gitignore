@@ -1,0 +1,10 @@
+.DS_Store
+/data.zip
+/data
+/eval.sh
+/encode
+/decode
+/src/encode
+/src/decode
+/src/debug
+/src/*.o
