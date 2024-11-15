@@ -1,7 +1,8 @@
 CC= gcc
 LD= gcc
 CCFLAGS= -c -O2 -std=c2x -march=native -fno-ident \
-    -Wall -Wextra -Wshadow -Wstrict-aliasing -Werror -pedantic
+    -Wall -Wextra -Wshadow -Wstrict-aliasing -Werror -pedantic \
+    -Wno-gnu-zero-variadic-macro-arguments
 LDFLAGS=
 INCS=
 LIBS=

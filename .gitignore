@@ -8,3 +8,4 @@
 /src/decode
 /src/debug
 /src/*.o
+/empty.wav

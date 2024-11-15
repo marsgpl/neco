@@ -17,7 +17,7 @@
 #define error_errno(msg, ...) { \
     fprintf(stderr, LOG_ERROR_START msg "; errno: %s (%d)\n" \
         __VA_OPT__(,) __VA_ARGS__, \
-        strerror(errno), errno)); \
+        strerror(errno), errno); \
     exit(EXIT_FAILURE); \
 }
 
