@@ -12,6 +12,8 @@ int main(int argc, const char **argv) {
         create_empty_wav(path);
     } else if (eq(cmd, "header")) {
         print_wav_header(path);
+    } else if (eq(cmd, "chart")) {
+        chart(path);
     } else if (eq(cmd, "aggr")) {
         aggr(path);
     } else {
@@ -33,7 +35,8 @@ static void print_wav_header(const char *path) {
     wav_header_t *header = (wav_header_t *)content;
 
     if (size < sizeof(wav_header_t)) {
-        error("file is too small: %lu; min: %lu", size, sizeof(wav_header_t));
+        error("file is too small: %lu; min: %lu (wav header)",
+            size, sizeof(wav_header_t));
     }
 
     wav_print_header(header);
@@ -107,7 +110,8 @@ static void aggr_process_file(aggr_ctx *ctx) {
     size_t size = st.st_size;
 
     if (size < sizeof(wav_header_t)) {
-        error("file is too small: %lu; min: %lu", size, sizeof(wav_header_t));
+        error("file is too small: %lu; min: %lu (wav header)",
+            size, sizeof(wav_header_t));
     } else if (size > AGGR_CONTENT_MAX_LEN) {
         error("file size is too big: %lu; max: %lu (can be increased)",
             size, AGGR_CONTENT_MAX_LEN);
@@ -132,7 +136,7 @@ static void aggr_process_file(aggr_ctx *ctx) {
     wav_header_t *header = (wav_header_t *)content;
     size_t data_size = header->data_size;
     size_t bpb = header->bytes_per_block;
-    char *points = content + sizeof(wav_header_t);
+    const char *points = content + sizeof(wav_header_t);
 
     wav_validate_header(header, size);
 
@@ -140,14 +144,24 @@ static void aggr_process_file(aggr_ctx *ctx) {
     ctx->total_size += size;
     ctx->total_points_n += data_size / bpb;
 
+    int16_t prev_point;
+
     for (size_t offset = 0; offset < data_size; offset += bpb) {
-        // -32768 - 32767
-        int16_t point = points[offset] | (points[offset + 1] << 8);
+        int16_t point = (points[offset]) | (points[offset + 1] << 8);
+        // -32768 - 32767 -> +32768 -> 0 - 65535
         ctx->uniqs[point + 32768] = 1;
+
+        if (offset > 0) {
+            ctx->deltas[point - prev_point + 65536] = 1;
+        }
+
+        prev_point = point;
     }
 }
 
 static void aggr_print_stats(aggr_ctx *ctx) {
+    size_t n = 0;
+
     printf("files: %lu\n",
         ctx->files_n);
 
@@ -163,17 +177,82 @@ static void aggr_print_stats(aggr_ctx *ctx) {
     printf("avg points n: %lu\n",
         ctx->files_n ? ctx->total_points_n / ctx->files_n : 0);
 
-    printf("uniq points:\n");
-
-    size_t uniqs_n = 0;
-
+    // printf("uniq points:\n");
     for (int i = 0; i < 65536; ++i) {
         if (ctx->uniqs[i]) {
-            uniqs_n++;
-            printf("%d,", i - 32768);
+            n++;
+            // printf("%d,", i - 32768);
         }
     }
+    // printf("\n");
 
-    printf("\n");
-    printf("uniq points n: %lu\n", uniqs_n);
+    printf("uniq points n: %lu\n", n);
+
+    // printf("uniq deltas:\n");
+    for (int i = 0; i < 131072; ++i) {
+        if (ctx->deltas[i]) {
+            n++;
+            // printf("%d,", i - 65536);
+        }
+    }
+    // printf("\n");
+
+    printf("uniq deltas n: %lu\n", n);
+}
+
+static void chart(const char *path) {
+    size_t size;
+    const char *content = read_file(path, &size);
+    wav_header_t *header = (wav_header_t *)content;
+    size_t data_size = header->data_size;
+    size_t bpb = header->bytes_per_block;
+    const char *points = content + sizeof(wav_header_t);
+
+    if (size < sizeof(wav_header_t)) {
+        error("file is too small: %lu; min: %lu (wav header)",
+            size, sizeof(wav_header_t));
+    }
+
+    wav_validate_header(header, size);
+
+    // "M 0 0000.00 l" + " 1 -0000.00"
+    size_t lines_size = 13 + 11 * (data_size / bpb - 1) + 1; // + nil
+    size_t lines_filled = 0;
+    char *lines = malloc(lines_size);
+
+    if (lines == NULL) {
+        error_errno("malloc failed; size: %lu", lines_size);
+    }
+
+    float prev_alias;
+
+    for (size_t offset = 0; offset < data_size; offset += bpb) {
+        int16_t point = (points[offset]) | (points[offset + 1] << 8);
+        float alias = ((float)point + 32768) / 64;
+
+        if (offset == 0) {
+            lines_filled += snprintf(lines + lines_filled,
+                lines_size - lines_filled,
+                "M 0 %.2f l", alias);
+        } else {
+            lines_filled += snprintf(lines + lines_filled,
+                lines_size - lines_filled,
+                " 6 %.2f", alias - prev_alias);
+        }
+
+        if (offset == (200 - 1) * bpb) {
+            break;
+        }
+
+        prev_alias = alias;
+    }
+
+    printf("<svg xmlns=\"http://www.w3.org/2000/svg\" "
+        "style=\"background: #292c32\">\n"
+        "<path d=\"%s\" fill=\"none\" stroke=\"#52b5d9\" stroke-width=\"1\"/>\n"
+        "</svg>\n",
+        lines);
+
+    free(lines);
+    free((void *)content);
 }

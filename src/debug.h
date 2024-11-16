@@ -23,10 +23,12 @@ typedef struct {
     char path[AGGR_PATH_MAX_LEN]; // tmp buf for file path
     char content[AGGR_CONTENT_MAX_LEN]; // tmp buf for file contents
     char uniqs[65536];
+    char deltas[131072];
 } aggr_ctx;
 
 static void create_empty_wav(const char *path);
 static void print_wav_header(const char *path);
+static void chart(const char *path);
 
 static void aggr(const char *path);
 static void aggr_make_path(aggr_ctx *ctx, const char *root, const char *path);

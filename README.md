@@ -16,3 +16,15 @@ tar -xvf data.zip
 cd src && make && cp encode decode ..
 cd ..
 ```
+
+## notes
+
+```sh
+files: 743
+total size: 146800526
+avg size: 197578
+total points n: 73383917
+avg points n: 98767
+uniq points n: 637
+uniq deltas n: 11106
+```
