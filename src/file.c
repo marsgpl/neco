@@ -1,6 +1,6 @@
 #include "file.h"
 
-void file_write(const char *path, const char *content, size_t size) {
+static void validate_string_path(const char *path) {
     if (path == NULL) {
         error("path is NULL");
     }
@@ -8,6 +8,24 @@ void file_write(const char *path, const char *content, size_t size) {
     if (strlen(path) == 0) {
         error("path is empty");
     }
+}
+
+void validate_dir_path(const char *path) {
+    validate_string_path(path);
+
+    struct stat st;
+
+    if (stat(path, &st) != 0) {
+        error_errno("stat failed; path: %s", path);
+    }
+
+    if (!S_ISDIR(st.st_mode)) {
+        error("not a directory; path: %s", path);
+    }
+}
+
+void write_file(const char *path, const char *content, size_t size) {
+    validate_string_path(path);
 
     struct stat st;
 
@@ -34,14 +52,8 @@ void file_write(const char *path, const char *content, size_t size) {
     }
 }
 
-char *file_read(const char *path, size_t *size) {
-    if (path == NULL) {
-        error("path is NULL");
-    }
-
-    if (strlen(path) == 0) {
-        error("path is empty");
-    }
+char *read_file(const char *path, size_t *size) {
+    validate_string_path(path);
 
     struct stat st;
 
