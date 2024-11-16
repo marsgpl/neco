@@ -24,9 +24,9 @@ debug: debug.o file.o wav.o
 .c.o:
 	$(CC) $(CCFLAGS) -o $@ $<
 
-encode.o: encode.c encode.h file.h wav.h error.h alias.h
-decode.o: decode.c decode.h file.h wav.h error.h alias.h
-debug.o: debug.c debug.h file.h wav.h error.h alias.h
+encode.o: encode.c encode.h file.h wav.h error.h
+decode.o: decode.c decode.h file.h wav.h error.h
+debug.o: debug.c debug.h file.h wav.h error.h
 file.o: file.c file.h error.h
 wav.o: wav.c wav.h error.h
 

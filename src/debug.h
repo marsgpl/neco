@@ -5,7 +5,6 @@
 #include "file.h"
 #include "wav.h"
 #include "error.h"
-#include "alias.h"
 
 #define NEED_ARGC 3
 #define USAGE "./debug cmd path"
@@ -22,8 +21,8 @@ typedef struct {
     size_t total_points_n;
     char path[AGGR_PATH_MAX_LEN]; // tmp buf for file path
     char content[AGGR_CONTENT_MAX_LEN]; // tmp buf for file contents
-    char uniqs[65536];
-    char deltas[131072];
+    uint8_t uniqs[65536];
+    uint8_t deltas[131072];
 } aggr_ctx;
 
 static void create_empty_wav(const char *path);

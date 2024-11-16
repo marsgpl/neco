@@ -144,15 +144,18 @@ static void aggr_process_file(aggr_ctx *ctx) {
     ctx->total_size += size;
     ctx->total_points_n += data_size / bpb;
 
-    int16_t prev_point;
+    int16_t prev_point = 0;
 
     for (size_t offset = 0; offset < data_size; offset += bpb) {
         int16_t point = (points[offset]) | (points[offset + 1] << 8);
-        // -32768 - 32767 -> +32768 -> 0 - 65535
-        ctx->uniqs[point + 32768] = 1;
+
+        int uniq = (int)point + 32768;
+        int delta = (int)point - (int)prev_point + 65536;
+
+        ctx->uniqs[uniq] = 1;
 
         if (offset > 0) {
-            ctx->deltas[point - prev_point + 65536] = 1;
+            ctx->deltas[delta] = 1;
         }
 
         prev_point = point;
@@ -171,33 +174,23 @@ static void aggr_print_stats(aggr_ctx *ctx) {
     printf("avg size: %lu\n",
         ctx->files_n ? ctx->total_size / ctx->files_n : 0);
 
-    printf("total points n: %lu\n",
+    printf("total points: %lu\n",
         ctx->total_points_n);
 
-    printf("avg points n: %lu\n",
+    printf("avg points: %lu\n",
         ctx->files_n ? ctx->total_points_n / ctx->files_n : 0);
 
-    // printf("uniq points:\n");
     for (int i = 0; i < 65536; ++i) {
-        if (ctx->uniqs[i]) {
-            n++;
-            // printf("%d,", i - 32768);
-        }
+        if (ctx->uniqs[i]) n++;
     }
-    // printf("\n");
 
-    printf("uniq points n: %lu\n", n);
+    printf("uniq points: %lu\n", n);
 
-    // printf("uniq deltas:\n");
     for (int i = 0; i < 131072; ++i) {
-        if (ctx->deltas[i]) {
-            n++;
-            // printf("%d,", i - 65536);
-        }
+        if (ctx->deltas[i]) n++;
     }
-    // printf("\n");
 
-    printf("uniq deltas n: %lu\n", n);
+    printf("uniq deltas: %lu\n", n);
 }
 
 static void chart(const char *path) {
@@ -215,8 +208,8 @@ static void chart(const char *path) {
 
     wav_validate_header(header, size);
 
-    // "M 0 0000.00 l" + " 1 -0000.00"
-    size_t lines_size = 13 + 11 * (data_size / bpb - 1) + 1; // + nil
+    // "M 0 0000.00 l" + " 000 -0000.00"
+    size_t lines_size = 13 + 13 * (data_size / bpb - 1) + 1; // + nil
     size_t lines_filled = 0;
     char *lines = malloc(lines_size);
 
@@ -224,11 +217,15 @@ static void chart(const char *path) {
         error_errno("malloc failed; size: %lu", lines_size);
     }
 
-    float prev_alias;
+    float prev_alias = 0;
 
     for (size_t offset = 0; offset < data_size; offset += bpb) {
         int16_t point = (points[offset]) | (points[offset + 1] << 8);
         float alias = ((float)point + 32768) / 64;
+
+        if (offset == 4000) {
+            break;
+        }
 
         if (offset == 0) {
             lines_filled += snprintf(lines + lines_filled,
@@ -237,11 +234,7 @@ static void chart(const char *path) {
         } else {
             lines_filled += snprintf(lines + lines_filled,
                 lines_size - lines_filled,
-                " 6 %.2f", alias - prev_alias);
-        }
-
-        if (offset == (200 - 1) * bpb) {
-            break;
+                " 5 %.2f", alias - prev_alias);
         }
 
         prev_alias = alias;

@@ -23,8 +23,17 @@ cd ..
 files: 743
 total size: 146800526
 avg size: 197578
-total points n: 73383917
-avg points n: 98767
-uniq points n: 637
-uniq deltas n: 11106
+total points: 73383917
+avg points: 98767
+uniq points: 637
+uniq deltas: 11106
+```
+
+## charts
+
+```sh
+mkdir -p charts/data
+for file in data/*.wav; do
+    src/debug chart $file > charts/$file.svg
+done
 ```

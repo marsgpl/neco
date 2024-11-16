@@ -4,7 +4,6 @@
 #include "file.h"
 #include "wav.h"
 #include "error.h"
-#include "alias.h"
 
 #define inline __inline__
 #define likely(expr) __builtin_expect(expr, 1)
